@@ -1,0 +1,576 @@
+# Тестирование в Go с Ginkgo & Gomega
+Summary: В этом докладе мы шагнём за пределы пакета `testing` и рассмотрим альтернативу в лице Ginkgo и Gomega, а также разберём опыт продолжительного использования в реальных проектах.
+
+Александр Егурнов
+Team Lead Backend, Verve Group
+alexander.egurnov@verve.com
+
+## Обо мне
+: 00:01
+
+* Александр Егурнов
+* Team Lead Backend в Verve Group
+* Пишу на Go с 2016
+
+: Большие проекты (сотни тысяч строк, сотни файлов)
+: Высокие нагрузки (сотни тысяч запросов в секунду)
+
+: Видел проекты с тестами
+: * с тестами
+: * без тестов
+: * с полезными тестами
+: * с бесполезными тестами, которых всё равно что нет
+: * с такими тестам, что лучше бы их не было
+
+## О компании
+: 00:02
+
+<br>
+<img src="img/Verve Group Logo.png" alt="Verve Group Logo" width="400"/>
+<br>
+
+* Mobile AdTech
+* Продукт
+  * Потребляет и предоставляет API
+  * Go, MySQL, Kafka, Redis, Docker, K8s, CI/CD
+
+: Релевантные факты
+: Влияет на использование
+
+## План
+: 00:03
+
+* Тестирование кода на Go
+  * Какие варианты?
+  * Как выбирать?
+* Обзор Ginkgo & Gomega
+  * Интересные особенности
+  * Типичные ошибки
+  * Опыт использования
+
+: Начну с обзора инструментов тестирования ...
+: Особое внимание уделю Ginkgo & Gomega ...
+: Сказать, что будет много кода в конце
+
+## Для кого этот доклад?
+: 00:03
+
+* Уверенное знание Go
+* Опыт тестирования
+* Выросший проект
+* Желание пробовать новое
+
+## Опрос
+: 00:03
+
+* Как часто вы пишете тесты?
+  * Никогда
+  * Время от времени
+  * Каждый день
+
+* Какие проблемы возникают при написании тестов?
+  * Нет проблем
+  * Не царская работа - тесты писать
+  * Read-only тесты: пишутся однажды и больше не меняются
+  * Хрупкие тесты: меняешь одну строчку кода - ломаются 40 разных тестов
+  * Слишком живучие тесты: код сломан, тесты нет
+  * Медленные тесты
+  * Другое: в чат
+
+: Мои боли:
+: * Тесты на 2 экрана с 2 строчками проверок
+: * Тесты, которые после ухода разработчиков никто не стал поддерживать
+: * Тесты понять сложнее, чем код
+
+## Какие варианты есть?
+: 00:04
+
+## Другой язык: Java/Python/etc
+: 00:05
+
+* Дублирование кода
+* Усложнение
+  * Разработки
+  * CI/CD
+* Риски при изменениях в команде
+
+: * Дублирование решений
+: * Лишняя умственная нагрузка
+: * Не распыляться: отсутствие поддержки при изменении команды
+:   * 2 раза разработчики ушли и тесты умерли.
+
+## Популярные опции
+: 00:05
+
+.image img/JetBrains_survey_2020_highlighted.png _ 700
+.caption Источник: [[https://www.jetbrains.com/lp/devecosystem-2020/go/][JetBrains - The State of Developer Ecosystem 2020]]
+
+## testing
+: 00:06
+
+`+` Встроенная  
+`+` Простая  
+`-` Надо много писать самостоятельно  
+
+: + хватает для многих задач
+: - все проверки надо писать самостоятельно
+
+## testing
+: 00:06
+
+//.code src/testing_test.go /BEGIN testing1/,/END testing1/
+<img style="margin-top:20px" src="img/code-133/testing1.png" alt="testing1"/>
+
+## testing
+: 00:06
+
+//.code src/testing_test.go /BEGIN testing2/,/END testing2/
+<img style="margin-top:20px" src="img/code-133/testing2.png" alt="testing2"/>
+
+## testify
+: 00:07
+
+* assert
+* require
+* mock
+* suite
+
+## testify
+: 00:07
+
+`+` Дополняет testing  
+`+` Обширный API  
+`+` Setup/teardown - suite  
+`+` Mocking - mock  
+`?` Удобство API  
+`-` Ограниченная расширяемость  
+
+: + хорошо дополняет встроенный пакет testing
+: + достаточно много разных проверок - паритет с Ginkgo
+: ± код не читается как естественный язык / не пытается создать Domain Specific Language
+: - фиксированный набор проверок, нет расширяемости
+: - не самый удобный API
+: - классическая ошибка - перепутать actual и expected
+
+## testify
+: 00:07
+
+//.code src/testify_test.go /BEGIN testify1/,/END testify1/
+<img style="margin-top:20px" src="img/code-133/testify1.png" alt="testify1"/>
+
+## Классическая ошибка
+: 00:08
+
+//.code src/testify_test.go /BEGIN testify-out/,/END testify-out/
+<img style="margin-top:20px" src="img/code-133/testify-out.png" alt="testify-out"/>
+
+## Ginkgo & Gomega
+: 00:08
+
+`+` Структура  
+`+` Setup / teardown  
+`+` Мощный DSL  
+`+` Естественной язык  
+`+` Расширяемость  
+`-` Сложность  
+
+: + структура
+: + мощный DSL
+: + можно писать код, читающийся в естественном порядке слов на английском языке
+: + можно комбинировать матчеры для создания сложной логики и писать свои собственные
+: - можно увлечься и всё переусложнить
+
+: Предметно-ориентированный язык
+
+## Как выбирать?
+: 00:08
+
+## Когда?
+: 00:10
+
+* Становится
+  * сложно читать
+  * сложно писать
+  * неудобно менять
+* Разрастается обвязка - testing harness
+  * построение / очистка тестового окружения
+  * проверки, валидации
+  * API клиенты
+
+: * Слишком много boilerplate
+: * Не видно логики
+: * Для сложных случаев начинают появляться самописные помощники, чекеры,
+:   с которыми новым разработчикам приходится разбираться.
+: * В этих помощниках появляются баги =)
+
+: Термин: обвязка / harness
+
+## Harness
+: 00:11
+
+// .image img/harness1.jpg
+// .image img/harness2.jpg
+<table>
+  <tr>
+    <td style="border: 0px">
+      <figure>
+        <img src="img/harness1.jpg" alt="climbing harness" width="400"/>
+        <figcaption style="font-size: 16px">Источник: <a href="https://en.wikipedia.org/wiki/Climbing_harness">https://en.wikipedia.org/wiki/Climbing_harness</a></figcaption>
+      </figure>
+    </td>
+    <td style="border: 0px">
+      <figure>
+        <img src="img/harness2.jpg" alt="horse harness" width="400"/>
+        <figcaption style="font-size: 16px">Источник: <a href="https://en.wikipedia.org/wiki/Horse_harness">https://en.wikipedia.org/wiki/Horse_harness</a></figcaption>
+      </figure>
+    </td>
+  </tr>
+</table>
+
+## Зачем?
+: 00:12
+
+* Упростить
+  * чтение
+  * написание
+* Убрать повторения
+* Писать тесты, а не обвязку
+* Бонус: переносимость
+
+: * упростить тесты - чтение
+:   сделать их более понятными
+: * упростить написание
+:   (легче писать - чаще пишешь - больше тестов)
+: * уменьшить повторение
+: * не переизобретать функционал, уже имеющийся в более мощных инструментах
+: * хочется попробовать BDD
+
+: Не всегда есть возможность забрать старый код в новый проект
+
+## DRY vs DAMP
+: 00:13
+
+* DRY - Don’t Repeat Yourself
+* DAMP - Descriptive And Meaningful Phrases
+
+: DRY - сухо
+: хорошо - один раз написал - много раз используешь
+: плохо - построение в 1000 строчках от использования
+
+: DAMP - влажно
+: хорошо - построение в радиусе пары экранов от использования
+: тесто явно описывает, что происходит. Минимум магии.
+: Clear is better than clever.
+
+## Proverb
+: 00:13
+
+.image img/clear.png
+.caption Источник: [[https://dave.cheney.net/paste/clear-is-better-than-clever.pdf][Dave Cheney - GopherCon Singapore 2019]]
+
+## Proverb
+: 00:13
+
+Ссылки:
+* Clear is better than clever <sub>[https://dave.cheney.net/2019/07/09/clear-is-better-than-clever](https://dave.cheney.net/2019/07/09/clear-is-better-than-clever)</sub>
+* Go Proverbs <sub>[https://go-proverbs.github.io/](https://go-proverbs.github.io/)</sub>
+
+: Rob Pike
+
+## Пирамида тестирования
+: 00:14
+
+* End2End - весь продукт, blackbox
+* Integration - несколько связанных частей
+* Unit - одна функция или структура
+
+.image img/testPyramid_mine.png _ 500
+.caption Адаптировано из [[https://martinfowler.com/articles/practical-test-pyramid.html][martinfowler.com - The Practical Test Pyramid]]
+
+: Больше тестов хороших и разных!
+: Тесты бывают разные => разные инструменты
+
+: Консенсуса нет, обозначения в рамках доклада
+
+: Личный выбор:
+:   * testing+testify для юнит и интеграционных тестов;
+:   * ginkgo+gomega для end-to-end тестирования.
+
+: Давайте расскажу почему...
+
+## Ginkgo & Gomega
+: 00:15
+
+: Теперь когда поняли когда и зачем этим заниматься, давайте окунёмся в код.
+: И посмотрим, как не превратить его в еще одну проблему. =)
+
+## Что это?
+: 00:15
+
+* Ginkgo
+  * Фреймворк
+      * задает структуру
+      * контролирует твой код
+  * [https://onsi.github.io/ginkgo/](https://onsi.github.io/ginkgo/)
+* Gomega
+  * Библиотека ассертов
+      * помогает делать утверждения
+      * контролируется твоим кодом
+  * [http://onsi.github.io/gomega/](http://onsi.github.io/gomega/)
+
+: inversion of control - инверсия контроля
+
+## Интересные особенности
+: 00:15
+
+: Полный обзор - в доках!
+: Интересные особенности
+
+## Ginkgo
+: 00:16
+
+## Testing support
+: 00:16
+
+//.code src/ginkgo_talk_2021_suite_test.go /BEGIN suite/,/END suite/ HLrun
+<img style="margin-top:20px" src="img/code-133/suite-HLrun.png" alt="suite"/>
+
+## Дерево тестов
+: 00:17
+
+//.code src/tree_test.go /BEGIN tree/,/END tree/
+<img style="margin-top:20px" src="img/code-133/tree.png" alt="tree"/>
+
+## Дерево тестов
+: 00:17
+
+Два этапа
+* Построение
+* Исполнение
+
+**Внимание:** Замыкания!
+
+: Правила, как для веселого вечера: лучше не мешать.
+
+## Setup/Teardown
+: 00:18
+
+//.code src/tree_test.go /BEGIN setup-tree/,/END setup-tree/
+<img style="margin-top:20px" src="img/code-133/setup-tree.png" alt="setup-tree"/>
+
+## Setup/Teardown
+: 00:18
+
+//.code src/tree_test.go /BEGIN setup-res/,/END setup-res/
+<img style="margin-top:20px" src="img/code-133/setup-res.png" alt="setup-res"/>
+
+## Focus/Skip/Pending
+: 00:18
+
+//.code src/tree_test.go /BEGIN focus/,/END focus/
+<img style="margin-top:20px" src="img/code-133/focus.png" alt="focus"/>
+
+: Когда-нибудь было, что запускали все тесты вместо одного?
+: Продвинутая IDE тоже решает проблему
+: Не пройдёт CI/CD - ненулевой код возврата
+
+## GinkgoWriter
+: 00:19
+
+//.code src/ginkgo_talk_2021_suite_test.go /BEGIN suite/,/END suite/ HLgw
+<img style="margin-top:20px" src="img/code-133/suite-HLgw.png" alt="suite"/>
+
+: За логами тестов не видно
+
+## Gomega
+: 00:19
+
+## Отдельное использование
+: 00:20
+
+//.code src/gomega_standalone_test.go /BEGIN gomega/,/END gomega/
+<img style="margin-top:20px" src="img/code-133/gomega.png" alt="gomega"/>
+
+## Матчеры
+: 00:20
+
+: ввести понятие "матчер"
+: многие уже есть в testify
+
+//.code src/matchers_test.go /BEGIN matchers1/,/END matchers1/
+<img style="margin-top:20px" src="img/code-133/matchers1.png" alt="matchers1"/>
+
+## Матчеры
+: 00:21
+
+//.code src/matchers_test.go /BEGIN matchers2/,/END matchers2/
+<img style="margin-top:20px" src="img/code-133/matchers2.png" alt="matchers2"/>
+
+## Матчеры
+: 00:21
+
+//.code src/matchers_test.go /BEGIN eventually/,/END eventually/
+<img style="margin-top:20px" src="img/code-133/eventually.png" alt="eventually"/>
+
+## Матчеры - Комбинирование
+: 00:22
+
+//.code src/combination_test.go /BEGIN combine/,/END combine/
+<img style="margin-top:20px" src="img/code-133/combine.png" alt="combine"/>
+
+## Матчеры - Трансформации
+: 00:22
+
+//.code src/combination_test.go /BEGIN transform/,/END transform/
+<img style="margin-top:20px" src="img/code-133/transform.png" alt="transform"/>
+
+## Типичные ошибки
+: 00:23
+
+## Сравнение разнотипных значений
+: 00:23
+
+//.code src/foot_shots_test.go /BEGIN TypeConv/,/END TypeConv/
+<img style="margin-top:20px" src="img/code-133/TypeConv.png" alt="TypeConv"/>
+
+: assert тоже
+
+## ContainElement / ContainSubstring
+: 00:24
+
+//.code src/foot_shots_test.go /BEGIN ContainElement/,/END ContainElement/
+<img style="margin-top:20px" src="img/code-133/ContainElement.png" alt="ContainElement"/>
+
+: assert тоже
+
+## Eventually
+: 00:24
+
+//.code src/foot_shots_test.go /BEGIN Eventually/,/END Eventually/
+<img style="margin-top:20px" src="img/code-133/Eventually-shots.png" alt="Eventually"/>
+
+: Замечательно работает с каналами и функциями.
+: Не предназначен для статичных значений, но работает и с ними.
+
+## Замыкания
+: 00:25
+
+//.code src/foot_shots_test.go /BEGIN closures1/,/END closures1/
+<img style="margin-top:20px" src="img/code-133/closures1.png" alt="closures1"/>
+
+## Замыкания
+: 00:25
+
+//.code src/foot_shots_test.go /BEGIN closures2/,/END closures2/
+<img style="margin-top:20px" src="img/code-133/closures2.png" alt="closures2"/>
+
+## Переменная цикла
+: 00:26
+
+//.code src/foot_shots_test.go /BEGIN Loop1/,/END Loop1/
+<img style="margin-top:20px" src="img/code-133/Loop1.png" alt="Loop1"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN Loop1-res/,/END Loop1-res/
+<img style="margin-top:20px" src="img/code-133/Loop1-res.png" alt="Loop1-res"/>
+
+## Переменная цикла
+: 00:26
+
+//.code src/foot_shots_test.go /BEGIN Loop2/,/END Loop2/
+<img style="margin-top:20px" src="img/code-133/Loop2.png" alt="Loop2"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN Loop2-res/,/END Loop2-res/
+<img style="margin-top:20px" src="img/code-133/Loop2-res.png" alt="Loop2-res"/>
+
+## GinkgoRecover
+: 00:26
+
+: Забыть вставить GinkgoRecover
+: Тесты с грохотом обвалятся
+
+: как в Матрице - смерть в горутине - смерть в реальном мире
+
+//.code src/foot_shots_test.go /BEGIN recover1/,/END recover1/
+<img style="margin-top:20px" src="img/code-133/recover1.png" alt="recover1"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN recover1-res/,/END recover1-res/
+<img style="margin-top:20px" src="img/code-133/recover1-res.png" alt="recover1-res"/>
+
+## GinkgoRecover
+: 00:26
+
+//.code src/foot_shots_test.go /BEGIN recover2/,/END recover2/
+<img style="margin-top:20px" src="img/code-133/recover2.png" alt="recover2"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN recover2-res/,/END recover2-res/
+<img style="margin-top:20px" src="img/code-133/recover2-res.png" alt="recover2-res"/>
+
+## Асинхронные тесты
+: 00:27
+
+//.code src/foot_shots_test.go /BEGIN async1/,/END async1/
+<img style="margin-top:20px" src="img/code-133/async1.png" alt="async1"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN async1-res/,/END async1-res/
+<img style="margin-top:20px" src="img/code-133/async1-res.png" alt="async1-res"/>
+
+## Асинхронные тесты
+: 00:27
+
+//.code src/foot_shots_test.go /BEGIN async2/,/END async2/
+<img style="margin-top:20px" src="img/code-133/async2.png" alt="async2"/>
+<br>
+//.code src/foot_shots_test.go /BEGIN async2-res/,/END async2-res/
+<img style="margin-top:20px" src="img/code-133/async2-res.png" alt="async2-res"/>
+
+## Опыт использования
+: 00:28
+
+## Положительный
+: 00:29
+
+* Автоматизация
+* Читаемость
+* Простота освоения
+* Повторное использование кода
+* Переносимость
+
+: * С введением достаточного количества e2e тестов мы смогли полностью отказаться от ручного тестирования.
+: * тесты легче читать
+: * команда быстро освоила основы и начала использовать продвинутые приемы
+: * структурирование тестов позволяет не концентрироваться на setup&teardown и в целом упрощает повторное использование кода
+: * Gomega можно использовать независимо от Ginkgo
+
+## Отрицательный
+: 00:29
+
+* Ловушки
+* Сложность
+* Читаемость >_<
+
+: * в Ginkgo&Gomega есть свои ловушки: скрытое приведение типов при сравнении; поведение матчеров может меняться в зависимости от типа аргумента и т.д.
+: * с асинхронностью всё еще легко ошибиться
+: * чрезмерное использование BeforeEach/JustBeforeEach/BeforeSuit и сложная структура могут наоборот снизить читаемость и усложнить тестовый код.
+: * портянка с 10000 повторений vs вложенный ад
+: * Теряется обзор всего происходящего в тесте. (файл >1k строк)
+
+## Заключение
+: 00:30
+
+* Пишите тесты
+* Пишите разные тесты
+* Выбирайте инструмент под задачу
+* Начинайте со сломанного теста
+* Не увлекайтесь усложнением, ищите баланс
+
+: Убедитесь, что тест падает.
+
+## Ссылки
+: 00:30
+
+* Этот доклад
+  * Код [https://github.com/egurnov/ginkgo-talk-2021-pub](https://github.com/egurnov/ginkgo-talk-2021-pub)
+
+* Предыдущий доклад
+  * Код [https://github.com/egurnov/ginkgo-talk-2020](https://github.com/egurnov/ginkgo-talk-2020)
+  * Видео [https://youtu.be/FaDx5GTlXNE](https://youtu.be/FaDx5GTlXNE)
