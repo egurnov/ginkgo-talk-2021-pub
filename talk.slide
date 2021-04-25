@@ -568,6 +568,10 @@ alexander.egurnov@verve.com
 ## Ссылки
 : 00:30
 
+// http://talks.godoc.org/github.com/egurnov/ginkgo-talk-2021-pub/talk.slide
+// https://speakerdeck.com/egurnov/tiestirovaniie-v-go-s-ginkgo-and-gomega
+// https://github.com/egurnov/ginkgo-talk-2021-pub/blob/master/%D0%A2%D0%B5%D1%81%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20%D0%B2%20Go%20%D1%81%20Ginkgo%20%26%20Gomega.pdf
+
 * Этот доклад
   * Код [https://github.com/egurnov/ginkgo-talk-2021-pub](https://github.com/egurnov/ginkgo-talk-2021-pub)
 
