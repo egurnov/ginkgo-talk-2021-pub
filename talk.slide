@@ -99,11 +99,17 @@ alexander.egurnov@gmail.com
 : * Team changes put the stack at risk
 :   * 2 times I've seen tests being abandoned after the original devs left
 
-## Popular options
+## Popular options - 2020
 : 00:05
 
 .image img/JetBrains_survey_2020_highlighted.png _ 700
 .caption Source: [[https://www.jetbrains.com/lp/devecosystem-2020/go/][JetBrains - The State of Developer Ecosystem 2020]]
+
+## Popular options - 2021
+: 00:05
+
+.image img/JetBrains_survey_2021_highlighted.png _ 700
+.caption Source: [[https://www.jetbrains.com/lp/devecosystem-2021/go/][JetBrains - The State of Developer Ecosystem 2021]]
 
 ## testing
 : 00:06
